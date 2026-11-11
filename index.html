@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#05080e" />
+<title>AX-07「游隼」· 星舰结构剖析</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<svg class="sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="i-explode" viewBox="0 0 24 24"><path d="M12 3v5m0 8v5M3 12h5m8 0h5M5.6 5.6l3 3m6.8 6.8 3 3m0-12.8-3 3m-6.8 6.8-3 3"/><circle cx="12" cy="12" r="2.4"/></symbol>
+  <symbol id="i-assemble" viewBox="0 0 24 24"><path d="M4 12h5m6 0h5M12 4v5m0 6v5M8.5 8.5 12 12l3.5 3.5m0-7L12 12 8.5 15.5"/><circle cx="12" cy="12" r="2.4"/></symbol>
+  <symbol id="i-flame" viewBox="0 0 24 24"><path d="M12 3c2.6 3.4 1.2 5.1.5 6.4 1.6-.6 2.2-2 2.3-3.1 2.6 2.7 4.2 5.4 4.2 8.1A7 7 0 0 1 5 14.4c0-2.4 1.3-4.2 2.9-5.7-.2 1.8.5 2.8 1.3 3.2C9.4 9.2 10.3 6.2 12 3Z"/></symbol>
+  <symbol id="i-laser" viewBox="0 0 24 24"><path d="M3 12h13m-4-4 4 4-4 4M17 5l4 7-4 7M6 9v6"/></symbol>
+  <symbol id="i-spin" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.6-5.9M20 4v4h-4"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="9" cy="7" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="8" cy="17" r="2"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6"/><path d="m15 15 5 5"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-focus" viewBox="0 0 24 24"><path d="M4 9V4h5m6 0h5v5m0 6v5h-5m-6 0H4v-5"/><circle cx="12" cy="12" r="2.6"/></symbol>
+  <symbol id="i-camera" viewBox="0 0 24 24"><path d="M4 8h3l1.5-2h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.2"/></symbol>
+  <symbol id="i-reset" viewBox="0 0 24 24"><path d="M4 11a8 8 0 1 1 2.1 6.3M4 5v6h6"/></symbol>
+  <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.2a2.5 2.5 0 1 1 3.4 2.4c-.7.3-1 1-1 1.9M12 17h.01"/></symbol>
+  <symbol id="i-full" viewBox="0 0 24 24"><path d="M4 9V4h5m6 0h5v5m0 6v5h-5m-6 0H4v-5"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4.5 4.5L19 7"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></symbol>
+</svg>
+
+<div id="app">
+  <canvas id="scene" aria-label="AX-07 星舰三维交互模型"></canvas>
+  <div class="vignette" aria-hidden="true"></div>
+  <div class="grid-overlay" aria-hidden="true"></div>
+
+  <svg id="leaders" aria-hidden="true"></svg>
+  <div id="tags" aria-live="off"></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+      <div class="brand-copy">
+        <h1>AX-07 <em>「游隼」</em></h1>
+        <p>ORBITAL INTERCEPTOR · 交互式结构剖析</p>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <span class="status-chip"><i></i><span id="sysStatus">系统在线</span></span>
+      <button class="icon-btn" id="btnHelp" type="button" aria-label="操作说明" title="操作说明">
+        <svg class="ic"><use href="#i-help"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- 移动端：结构清单按需展开的常驻入口 -->
+  <button class="parts-toggle" id="btnParts" type="button" aria-controls="partsPanel" aria-expanded="false">
+    <svg class="ic"><use href="#i-list"/></svg>
+    <span>结构清单</span>
+    <span class="count" id="mobilePartCount">0</span>
+  </button>
+
+  <!-- 结构清单：桌面剖析时自动展开 -->
+  <aside class="panel parts-panel" id="partsPanel" aria-label="结构清单">
+    <div class="panel-head">
+      <div class="panel-title">结构清单 <span class="count" id="partCount">0</span></div>
+      <button class="icon-btn sm" id="btnCloseParts" type="button" aria-label="收起清单">
+        <svg class="ic"><use href="#i-close"/></svg>
+      </button>
+    </div>
+    <div class="search-wrap">
+      <svg class="ic"><use href="#i-search"/></svg>
+      <input id="partSearch" type="search" placeholder="搜索零件 / 代号" aria-label="搜索零件" autocomplete="off" />
+    </div>
+    <div class="part-list" id="partList"></div>
+    <div class="empty" id="partEmpty" hidden>
+      <p>没有匹配的零件</p>
+      <button class="text-btn" id="btnClearSearch" type="button">清除搜索</button>
+    </div>
+  </aside>
+
+  <!-- 零件信息卡 -->
+  <aside class="panel info-panel" id="infoPanel" aria-label="零件参数" hidden>
+    <div class="panel-head">
+      <div class="panel-title">零件参数</div>
+      <button class="icon-btn sm" id="btnCloseInfo" type="button" aria-label="关闭参数卡">
+        <svg class="ic"><use href="#i-close"/></svg>
+      </button>
+    </div>
+    <div class="info-body">
+      <div class="info-kicker" id="infoCat">结构 / STRUCTURE</div>
+      <h2 id="infoName">—</h2>
+      <div class="info-en" id="infoEn">—</div>
+      <p class="info-desc" id="infoDesc"></p>
+      <dl class="spec-table" id="infoSpecs"></dl>
+      <button class="ghost-btn" id="btnFocus" type="button">
+        <svg class="ic"><use href="#i-focus"/></svg><span>镜头聚焦该零件</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- 底部工具条 -->
+  <nav class="dock" aria-label="模型控制">
+    <button class="primary-btn" id="btnExplode" type="button">
+      <svg class="ic" id="explodeIcon"><use href="#i-explode"/></svg>
+      <span id="explodeText">一键剖析</span>
+    </button>
+    <div class="dock-sep" aria-hidden="true"></div>
+    <button class="tool-btn is-on" id="btnExhaust" type="button" aria-pressed="true" title="尾焰推进 (1)">
+      <svg class="ic"><use href="#i-flame"/></svg><span>尾焰</span>
+    </button>
+    <button class="tool-btn" id="btnLaser" type="button" aria-pressed="false" title="激光武器 (2)">
+      <svg class="ic"><use href="#i-laser"/></svg><span>激光</span>
+    </button>
+    <button class="tool-btn is-on" id="btnSpin" type="button" aria-pressed="true" title="自动旋转 (3)">
+      <svg class="ic"><use href="#i-spin"/></svg><span>自转</span>
+    </button>
+    <div class="dock-sep" aria-hidden="true"></div>
+    <button class="tool-btn more-btn" id="btnMore" type="button" aria-expanded="false" aria-controls="settingsPop" title="更多设置">
+      <svg class="ic"><use href="#i-settings"/></svg><span>设置</span>
+    </button>
+  </nav>
+
+  <div class="hint" id="hint">拖动旋转 · 滚轮缩放 · 点击任意零件查看参数</div>
+
+  <!-- 设置（低频功能入口） -->
+  <section class="panel settings-pop" id="settingsPop" aria-label="更多设置" hidden>
+    <div class="panel-head">
+      <div class="panel-title">更多设置</div>
+      <button class="icon-btn sm" id="btnCloseSettings" type="button" aria-label="关闭设置">
+        <svg class="ic"><use href="#i-close"/></svg>
+      </button>
+    </div>
+    <div class="settings-body">
+      <label class="switch-row" for="swLabels">
+        <span><b>零件标注</b><small>剖析时显示名称与引线</small></span>
+        <input type="checkbox" id="swLabels" checked /><i class="switch"></i>
+      </label>
+      <label class="switch-row" for="swWire">
+        <span><b>线框透视</b><small>查看内部结构走向</small></span>
+        <input type="checkbox" id="swWire" /><i class="switch"></i>
+      </label>
+      <label class="range-row" for="rgBloom">
+        <span><b>辉光强度</b><small id="bloomVal">0.52</small></span>
+        <input type="range" id="rgBloom" min="0" max="1.6" step="0.02" value="0.52" />
+      </label>
+      <label class="range-row" for="rgExposure">
+        <span><b>画面曝光</b><small id="exposureVal">1.00</small></span>
+        <input type="range" id="rgExposure" min="0.5" max="1.8" step="0.02" value="1.00" />
+      </label>
+      <div class="settings-actions">
+        <button class="ghost-btn" id="btnReset" type="button"><svg class="ic"><use href="#i-reset"/></svg><span>重置视角</span></button>
+        <button class="ghost-btn" id="btnShot" type="button"><svg class="ic"><use href="#i-camera"/></svg><span>导出截图</span></button>
+        <button class="ghost-btn" id="btnFull" type="button"><svg class="ic"><use href="#i-full"/></svg><span>全屏</span></button>
+      </div>
+      <details class="shortcuts">
+        <summary>键盘快捷键</summary>
+        <ul>
+          <li><kbd>空格</kbd> 剖析 / 合拢</li>
+          <li><kbd>1</kbd> 尾焰 · <kbd>2</kbd> 激光 · <kbd>3</kbd> 自转</li>
+          <li><kbd>R</kbd> 重置视角 · <kbd>Esc</kbd> 取消选中</li>
+        </ul>
+      </details>
+    </div>
+  </section>
+
+  <!-- 帮助 -->
+  <div class="modal-backdrop" id="helpModal" hidden>
+    <section class="panel modal" aria-label="操作说明">
+      <div class="panel-head">
+        <div class="panel-title">操作说明</div>
+        <button class="icon-btn sm" id="btnCloseHelp" type="button" aria-label="关闭说明">
+          <svg class="ic"><use href="#i-close"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p>这是一台可完整拆解的 AX-07 星舰三维模型，共 <b id="helpCount">0</b> 个独立零件组。</p>
+        <ol>
+          <li><b>一键剖析</b>：把全舰按结构分组拆开，再点一次合拢复位。</li>
+          <li><b>查看零件</b>：剖析后点模型、点引线标签或点左侧清单，右侧会显示参数。</li>
+          <li><b>特效</b>：尾焰为三层等离子体着色器，激光为相干光束，两者可同时开启。</li>
+          <li><b>视角</b>：左键拖动旋转，滚轮缩放，右键平移；设置里可重置视角、导出截图。</li>
+        </ol>
+        <button class="primary-btn wide" id="btnHelpOk" type="button">开始探索</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <div class="loading" id="loading">
+    <div class="loading-ring"></div>
+    <div class="loading-title">正在装配 AX-07</div>
+    <div class="loading-sub" id="loadingSub">初始化渲染管线…</div>
+  </div>
+
+  <div class="fatal" id="fatal" hidden>
+    <section class="panel">
+      <h2>无法启动三维渲染</h2>
+      <p id="fatalMsg"></p>
+      <p class="fatal-tip">请使用支持 WebGL 2 的 Chrome / Edge 打开，并确认浏览器已开启硬件加速。</p>
+    </section>
+  </div>
+</div>
+
+<script src="bundle.js"></script>
+</body>
+</html>

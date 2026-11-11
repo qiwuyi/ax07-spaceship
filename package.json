@@ -1,0 +1,21 @@
+{
+  "name": "spaceship",
+  "version": "1.0.0",
+  "description": "AX-07 星舰 · 可一键剖析的 Three.js 交互式三维模型",
+  "main": "index.html",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node test/smoke.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "esbuild": "^0.28.2",
+    "three": "^0.169.0"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^25.16.0"
+  }
+}
