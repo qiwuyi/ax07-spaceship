@@ -6,8 +6,11 @@ const ROOT = path.resolve(import.meta.dirname, '..');
 const SHOTS = path.join(ROOT, 'test', 'shots');
 fs.mkdirSync(SHOTS, { recursive: true });
 const CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
-const URL = 'file:///' + path.join(ROOT, 'index.html').replace(/\\/g, '/');
+// 默认跑本地 file://；设置 LIVE_URL 可回归线上 GitHub Pages
+const URL = process.env.LIVE_URL || ('file:///' + path.join(ROOT, 'index.html').replace(/\\/g, '/'));
+const PREFIX = process.env.LIVE_URL ? 'live-' : '';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+console.log('TARGET', URL);
 
 const browser = await puppeteer.launch({
   executablePath: CHROME,
@@ -27,6 +30,7 @@ const problems = [];
 page.on('pageerror', (e) => problems.push('PAGEERROR ' + e.message));
 page.on('console', (m) => { if (m.type() === 'error') problems.push('CONSOLE ' + m.text()); });
 page.on('requestfailed', (r) => problems.push('REQUEST ' + r.url() + ' ' + r.failure()?.errorText));
+page.on('response', (r) => { if (r.status() >= 400) problems.push('HTTP ' + r.status() + ' ' + r.url()); });
 
 await page.goto(URL, { waitUntil: 'load' });
 await page.waitForFunction(() => !!window.__AX07, { timeout: 60000 });
@@ -43,7 +47,7 @@ const boot = await page.evaluate(() => ({
   btn: document.getElementById('explodeText').textContent,
 }));
 console.log('BOOT', JSON.stringify(boot));
-await page.screenshot({ path: path.join(SHOTS, '01-assembled.png') });
+await page.screenshot({ path: path.join(SHOTS, PREFIX + '01-assembled.png') });
 
 // 一键剖析
 await page.click('#btnExplode');
@@ -56,7 +60,7 @@ const exploded = await page.evaluate(() => ({
   status: document.getElementById('sysStatus').textContent,
 }));
 console.log('EXPLODED', JSON.stringify(exploded));
-await page.screenshot({ path: path.join(SHOTS, '02-exploded.png') });
+await page.screenshot({ path: path.join(SHOTS, PREFIX + '02-exploded.png') });
 
 // 选中一个零件
 await page.evaluate(() => document.querySelector('.part-item')?.click());
@@ -68,7 +72,7 @@ const selected = await page.evaluate(() => ({
   activeItems: document.querySelectorAll('.part-item.active').length,
 }));
 console.log('SELECTED', JSON.stringify(selected));
-await page.screenshot({ path: path.join(SHOTS, '03-selected.png') });
+await page.screenshot({ path: path.join(SHOTS, PREFIX + '03-selected.png') });
 
 // 合拢态开火：验证整舰激光可见
 await page.click('#btnExplode');
@@ -81,12 +85,12 @@ const fx = await page.evaluate(() => ({
   btn: document.getElementById('explodeText').textContent,
 }));
 console.log('FX', JSON.stringify(fx));
-await page.screenshot({ path: path.join(SHOTS, '04-laser.png') });
+await page.screenshot({ path: path.join(SHOTS, PREFIX + '04-laser.png') });
 
 // 剖析态开火：验证光束跟随炮塔
 await page.click('#btnExplode');
 await sleep(1300);
-await page.screenshot({ path: path.join(SHOTS, '04b-laser-exploded.png') });
+await page.screenshot({ path: path.join(SHOTS, PREFIX + '04b-laser-exploded.png') });
 
 // 设置面板 + 搜索空态
 await page.click('#btnMore');
@@ -98,7 +102,7 @@ const settings = await page.evaluate(() => ({
   shortcuts: document.querySelectorAll('.shortcuts li').length,
 }));
 console.log('SETTINGS', JSON.stringify(settings));
-await page.screenshot({ path: path.join(SHOTS, '05-settings.png') });
+await page.screenshot({ path: path.join(SHOTS, PREFIX + '05-settings.png') });
 
 // 移动端：用独立页面在窄视口直接加载，避免桌面动态 resize 的样式滞后
 const m = await browser.newPage();
@@ -136,12 +140,12 @@ const mobile = await m.evaluate(() => {
   };
 });
 console.log('MOBILE', JSON.stringify(mobile));
-await m.screenshot({ path: path.join(SHOTS, '06-mobile.png') });
+await m.screenshot({ path: path.join(SHOTS, PREFIX + '06-mobile.png') });
 await m.click('#btnParts');
 await sleep(350);
 const drawer = await m.evaluate(() => document.getElementById('partsPanel').classList.contains('open'));
 console.log('MOBILE_DRAWER', JSON.stringify({ openAfterTap: drawer }));
-await m.screenshot({ path: path.join(SHOTS, '07-mobile-drawer.png') });
+await m.screenshot({ path: path.join(SHOTS, PREFIX + '07-mobile-drawer.png') });
 
 console.log('PROBLEMS', JSON.stringify(problems, null, 2));
 await browser.close();
